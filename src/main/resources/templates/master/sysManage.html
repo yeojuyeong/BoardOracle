@@ -1,0 +1,143 @@
+<!DOCTYPE html >
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<title>관리자 페이지</title>
+<style>
+.menubar {
+	width: 100%;
+	height: auto;
+	background-color: #168;
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	text-align: center
+}
+.menubar a:link, a:visited, a:active {
+	color: white;
+	font-weight: bold;
+}
+
+.menubar a {
+	display: block;
+	text-decoration: none;
+}
+
+.menubar .main_menu > li {
+	float: left;
+	width: 20%;
+	height: 100%;
+	line-height: 50px;
+	list-style: none;
+	font-weight: bold;
+	position: relative;
+	margin: 0px;	
+}
+
+.menubar .main_menu > li > a:hover {
+	background-color: #f0f6f9;
+	color: #168;
+	font-weight: bold;
+}
+
+.menubar .main_menu .sub_menu {
+	list-style: none;
+	display: none;
+	position: absolute;
+    padding-left: 0;
+    padding-right: 0;
+    background-color: #c7d1db;
+	width: 100%;
+	box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+}
+.menubar .main_menu>li:hover .sub_menu {
+    display:block;
+}
+.sub_menu a {
+	color: black;
+	padding: 8px;
+	text-decoration: none;
+	display: block;
+}
+.sub_menu a:hover { 
+	background-color: #4675a4; 
+}
+
+#content {
+    text-align: center;
+    font-size: 50px;
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+</style>
+</head>
+<body>
+
+<div class="menubar">
+	<ul class="main_menu">
+		<li><a href="/board/list?page=1">홈으로</a></li>
+		<li><a href="#">사용자 통계</a>
+			<ul class="sub_menu">
+				<li><a href="/master/getTotalMembers" onclick="showStatistics('전체 회원 숫자')">전체 회원 숫자</a></li>
+				<li><a href="/master/getTotalBoards" onclick="showStatistics('게시물 갯수')">게시물 갯수</a></li>
+				<li><a href="/master/getTotalReplys" onclick="showStatistics('댓글 갯수')">댓글 갯수</a></li>
+			</ul>
+		</li>	
+		<li><a href="#">첨부파일 관리</a></li>
+		<li><a href="#">게시판 관리</a></li>
+		<li><a href="#">시스템 정보</a></li>
+	</ul>
+
+</div>
+
+
+<!-- 동적으로 내용을 변경할 공간 -->
+<div id="content">
+  <h1 id="memberCount"> </h1>
+</div>
+
+<script>
+// 클릭 이벤트를 처리하여 드롭다운 메뉴를 토글하고 화면 내용을 변경
+function showStatistics(statisticsType, event) {
+  const contentDiv = document.getElementById('memberCount');
+  if (statisticsType === '전체 회원 숫자') {
+    // 서버로부터 회원 수를 가져오는 요청을 보냅니다.
+    fetch('/master/getTotalMembers')
+      .then(response => response.text())
+      .then(data => {
+        contentDiv.innerText = `회원수: ${data}`;
+      })
+      .catch(error => {
+        console.error(error);
+        contentDiv.innerText = '데이터를 가져오는데 실패했습니다.';
+      });
+  } else if (statisticsType === '게시물 갯수') {
+	// 서버로부터 게시물 갯수를 가져오는 요청을 보냅니다.
+	    fetch('/master/getTotalBoards')
+	      .then(response => response.text())
+	      .then(data => {
+	        contentDiv.innerText = `게시물 갯수: ${data}`;
+	      })
+	      .catch(error => {
+	        console.error(error);
+	        contentDiv.innerText = '데이터를 가져오는데 실패했습니다.';
+	      });
+  } else if (statisticsType === '댓글 갯수') {
+	  fetch('/master/getTotalReplys')
+      .then(response => response.text())
+      .then(data => {
+        contentDiv.innerText = `댓글 갯수: ${data}`;
+      })
+      .catch(error => {
+        console.error(error);
+        contentDiv.innerText = '데이터를 가져오는데 실패했습니다.';
+      });
+  }
+}
+</script>
+
+</body>
+</html>

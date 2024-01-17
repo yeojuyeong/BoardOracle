@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<title>회원 기본 정보 수정</title>
+<link rel="stylesheet" href="/css/board.css">
+</head>
+<body>
+<div class="main">
+	<script>
+		const userid = '[[${session.userid}]]';
+		if(userid == '') {
+			document.location.href='/';
+		}
+	</script>
+	<h1>회원 기본 정보 변경</h1><br>
+	
+	<div class="WriteForm">
+		<form id="RegistryForm" name="RegistryForm" method="POST" enctype="multipart/form-data">
+		<br><br>
+			<input type="file" name="fileUpload" id="imageFile" style="display:none" />
+			<span>이미지 수정을 원하시면 화면을 클릭해 주세요.</span>
+			<div class="imageZone" id="imageZone">
+				<img th:src="@{'/profile/' + ${memberInfo.stored_filename}}" style="display:block;width:80%;height:auto;margin:auto">
+			</div>
+			<div style="width:90%; text-align:left; position:relative; left: 35px; border-bottom:2px solid #adadad; margin:10px; padding: 10px;">
+				아이디 : 
+				<span id="userid" th:text="${memberInfo.userid}"></span><br>
+				<input type="password" id="password" name="password" value="password" style="display: none;">
+				성별 : 
+				<label><input type="radio" name="gender" value="남성" th:checked="${memberInfo.gender eq '남성'}">남성</label>	
+				<label><input type="radio" name="gender" value="여성" th:checked="${memberInfo.gender eq '여성'}">여성</label><br>
+				취미 : 
+				<label><input type="checkbox" id="all" name="all" onclick="selectAll(this)">전체선택</label>
+				<label><input type="checkbox" name="hobby" value="음악감상" th:checked="${memberInfo.hobby.contains('음악감상')}">음악감상</label>
+				<label><input type="checkbox" name="hobby" value="영화보기" th:checked="${memberInfo.hobby.contains('영화보기')}">영화보기</label>
+				<label><input type="checkbox" name="hobby" value="스포츠" th:checked="${memberInfo.hobby.contains('스포츠')}">스포츠</label><br>
+				직업 : 
+				<select name="job">
+					<option value="all" disabled selected>-- 아래의 내용 중에서 선택 --</option>
+					<option value="회사원" th:selected="${memberInfo.job eq '회사원'}">회사원</option>
+					<option value="공무원" th:selected="${memberInfo.job eq '공무원'}">공무원</option>
+					<option value="자영업" th:selected="${memberInfo.job eq '자영업'}">자영업</option>
+				</select>
+				<br>
+			</div>
+			<input type="text" id="addrSearch" name="addrSearch" class="addrSearch" placeholder="주소를 검색합니다." >
+			<input type="button" id="btn_addSearch" class="btn_addrSearch" value="주소검색" onclick="searchAddr()">
+			<input type="text" id="zipcode" class="input_field" name="zipcode" placeholder="우편번호가 검색되어 입력됩니다." readonly th:value="${memberInfo.zipcode}">
+			<input type="text" id="addr1" class="input_field" name="addr1" placeholder="주소가 검색되어 입력됩니다." readonly th:value="${addr1}">
+			<input type="text" id="addr2" class="input_field" name="addr2" placeholder="상세 주소를 입력하세요" th:value="${addr2}">
+			<input type="hidden" id="address" name="address" th:value="${memberInfo.address}">
+			<input type="text" id="telno" class="input_field" name="telno" placeholder="전화번호를 입력하세요" th:value="${memberInfo.telno}">
+			<input type="text" id="email" class="input_field" name="email" placeholder=" 이메일주소를 입력하세요" th:value="${memberInfo.email}">			
+			<textarea class="input_content" id="description" cols="100" rows="500" name="description" placeholder="자기 소개를 입력해 주세요">
+			[[${memberInfo.description}]]</textarea><br>
+			<input type="button" id="btnRegister" class="btn_write" value="수정" onclick="ModifyForm()">		
+			<input type="button" class="btn_cancel" value="취소" onclick="history.back()">	
+		</form>
+		<br><br>
+	
+	</div>
+
+</div>
+<br><br>
+</body>
+<script>
+window.onload = () => {
+	
+	var imgCheck = "N";
+	var imgZone = document.querySelector('#imageZone');
+	var fileEvent = document.querySelector('#imageFile');
+	
+	//address에서 addr1과 addr2 추출
+	const address = document.getElementById("address").value;
+	const zipcode = document.getElementById("zipcode").value;
+
+	//주소 정보 파싱 함수
+	function parseAddress(address) {
+	    const parts = address.split(" ");
+	    const addr1 = parts.slice(0, -1).join(" ");
+	    const addr2 = parts.slice(-1).join(" ");
+	    return { addr1, addr2 };
+	}
+
+	//addr1과 addr2를 사용하여 필드에 값을 설정
+	const { addr1, addr2 } = parseAddress(address);
+
+	document.getElementById("addr1").value = addr1;
+	document.getElementById("addr2").value = addr2;
+	
+	//imageZone 영역 클릭 시 파일이벤트 처리. 자바스크립트에선 이벤트 발생 시 이벤트 정보를 담고 있는 event(e)라는 객체를 자동 생성.
+	imgZone.addEventListener('click', (e)=> {
+		fileEvent.click(e); //사용자가 만든 UI를 통해 <input type="file">을 클릭하는 것과 같은 효과를 내게 됨.
+	});
+	
+	fileEvent.addEventListener('change', (e)=> {
+		const files = e.target.files;//선택한 파일 정보가 e.target.files(배열)에 저장
+		showImage(files); 
+	})
+	
+	const showImage = (files) => {
+		
+		imgZone.innerHTML = '';
+		const imgFile = files[0];
+		
+		if(imgFile.type.indexOf("image") < 0) {
+			alert("이미지 파일만 올려 주세요.");
+			return false;
+		}
+		
+		const reader = new FileReader(); //new 연산자를 통해서 FileReader 객체를 reader가 참조(상속)
+		reader.onload = function(event) { //reader.readAsDataURL(imgFile)로 이미지를 읽고 나서 해야 할 일
+			imgZone.innerHTML = "<img src=" + event.target.result + " id='uploadImg' style='width:350px;height:auto'>";
+		};
+		
+		reader.readAsDataURL(imgFile); //실제로 이미지 파일을 읽는 부분
+		imgCheck = "Y";		
+	}
+		
+		//유효성 검사
+		if(imgCheck == 'N') {
+			alert("프로필 이미지를 등록하세요");
+			return false;
+		}		
+		
+		const gender = document.querySelectorAll('input[name=gender]:checked');
+		//const gender = document.getElementsByName('gender');
+		
+		let genderValue = '';
+		for(let i=0; i<gender.length; i++){
+			if(gender[i].checked === true)
+				genderValue = gender[i].value;
+		}
+		
+		const hobby = document.querySelectorAll('input[name=hobby]:checked'); //유사 배열
+		let hobbyArray = []; //ES6+ 문법
+		for(let i=0; i<hobby.length; i++){
+			hobbyArray.push(hobby[i].value);
+		}
+		const job = document.querySelector('select[name=job] option:checked');
+		
+		if(genderValue == '') {
+			alert("성별을 선택하세요");
+			return false;
+		}
+		if(hobbyArray.length == 0) {
+			alert("취미를 선택하세요");
+			return false;
+		}
+		if(job.value == 'all') {
+			alert("직업을 선택하세요");
+			return false;
+		}
+		
+		if(zipcode.value == ''){
+			alert("우편번호를 입력하세요");
+			zipcode.focus();
+			return false;
+		}
+		if(addr2.value == '') {
+			alert("상세 주소를 입력하세요");
+			addr2.focus();
+			return false;
+		}		
+		address.value = addr1.value + " " + addr2.value;
+		
+		if(telno.value == '') {
+			alert("전화번호를 입력하세요");
+			telno.focus();
+			return false;
+		}
+		const beforeTelno = telno.value;
+		const afterTelno = beforeTelno.replace(/\-/ig,"").replace(/\ /ig,"").trim();
+		telno.value = afterTelno;
+		
+		const email = document.getElementById('email'); // 이메일 입력 요소를 선택
+		if (email.value.trim() === '') {
+		    alert("이메일 주소를 입력하세요");
+		    email.focus();
+		    return false;
+		}
+
+		// 이메일 정규식 패턴
+		const emailPattern = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;
+
+		// 이메일 주소 입력값
+		const enteredEmail = document.getElementById('email').value;
+
+		// 정규식을 사용하여 이메일 유효성 검사
+		if (!emailPattern.test(enteredEmail)) {
+		    // 이메일이 유효하지 않을 경우 처리
+		    alert("유효한 이메일 주소를 입력하세요.");
+		    return false; // 폼 제출을 막음
+		}
+		
+		
+		if(description.value == '') {
+			alert("자기소개를 입력하세요");
+			description.focus();
+			return false;
+		}
+
+}
+
+const ModifyForm = async () => {
+		
+		let formData = new FormData(RegistryForm);
+		
+		 // 서버로 데이터 전송
+	    await fetch("/member/memberInfoModify", {
+	        method: "POST", // 혹은 다른 HTTP 메서드 사용
+	        body: formData
+	    })
+	    .then(function(response) {
+	        // 서버 응답 처리
+	        if (response.ok) {
+	            return response.json(); // JSON 응답을 처리하도록 설정
+	        } else {
+	            throw new Error("서버 응답 오류");
+	        }
+	    })
+	    .then(function(data) {
+	        // 서버 응답 데이터 처리
+	        if (data.message === "SUCCESS") {
+	            alert("데이터 수정이 완료되었습니다.");
+	            window.location.href = "/member/memberInfo";
+	        } else {
+	            alert("데이터 수정 실패: " + data.errorMessage);
+	        }
+	    })
+	    .catch(function(error) {
+	        // 오류 처리
+	        console.error("오류 발생: " + error);
+	    });
+	};	
+	
+const selectAll = (checkElement) => {	
+	
+	const checkboxes = document.getElementsByName('hobby');
+	checkboxes.forEach((checkbox) => {
+		checkbox.checked = checkElement.checked;
+	});	
+		
+	/*
+	if(document.getElementById('all').checked == true)
+		for(var i = 0; i<document.getElementsByName('hobby').length; i++)
+			document.getElementsByName('hobby')[i].checked = true;
+	if(document.getElementById('all').checked == false)
+		for(var i = 0; i<document.getElementsByName('hobby').length; i++)
+			document.getElementsByName('hobby')[i].checked = false;	
+	*/
+}
+
+const searchAddr = () => {
+	
+	if(addrSearch.value == '') {
+		alert("검색할 주소를 입력하세요");
+		addrSearch.focus();
+		return false;
+	}
+	
+	window.open(
+		"/member/addrSearch?page=1&addrSearch=" + addrSearch.value,	
+		"주소검색",
+		"width=950, height=540, top=50, left=50"
+	);	
+}
+
+const idCheck = async () => {
+	
+	const userid = document.querySelector("#userid");
+	
+	await fetch('/member/idCheck',{		
+		method: "POST",
+		body: userid.value,		
+	}).then((response) => response.text())
+	  .then((data) => {		     
+			const idCheckNotice = document.querySelector('#idCheckNotice');
+			if(data == 0)
+				idCheckNotice.innerHTML = "사용 가능한 아이디입니다.";
+			else {
+				idCheckNotice.innerHTML = "이미 사용중인 아이디입니다.";
+				//userid.value = '';
+				userid.focus();
+			}
+	  });
+	
+}
+
+</script>
+</html>
